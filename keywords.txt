@@ -1,0 +1,10 @@
+DS3232RTC	KEYWORD1
+RTC	        KEYWORD1
+
+get		KEYWORD2
+set		KEYWORD2
+read		KEYWORD2
+write		KEYWORD2
+writeTime	KEYWORD2
+writeDate	KEYWORD2
+readTemperature	KEYWORD2
