@@ -7,7 +7,8 @@ For use with the Freetronics RTC module; http://www.freetronics.com/rtc
 Credits
 -------
 
-* This library is intended to be used with Arduino Time.h library functions; http://playground.arduino.cc/Code/Time
+* This library is intended to be used with Arduino Time.h library functions
+  - http://playground.arduino.cc/Code/Time
 
 * Based on code by Jonathan Oxer
   - http://www.freetronics.com/pages/rtc-real-time-clock-module-quickstart-guide
