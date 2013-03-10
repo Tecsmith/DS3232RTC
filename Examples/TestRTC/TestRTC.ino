@@ -75,12 +75,11 @@ void setup() {
     buflen = 0;
     pinMode(led, OUTPUT);
     cmdHelp(0);
+    RTC.set33kHzOutput(false);
 }
 
 void loop() {
-    // blink the pin 13 led
-    int i = millis() / 1000;  bool j = (i % 2) == 0;
-    if (led_on != j) { led_on = j; if (j) { digitalWrite(led, HIGH); } else { digitalWrite(led, LOW); } }
+    blink();
 
     if (Serial.available()) {
         // Process serial input for commands from the host.
@@ -102,6 +101,21 @@ void loop() {
                 buffer[buflen++] = ch - 'a' + 'A';
             else
                 buffer[buflen++] = ch;
+        }
+    }
+}
+
+void blink()
+{
+    // blink the pin 13 led
+    int i = millis() / 1000;
+    bool j = ((i % 2) == 0);
+    if (led_on != j) {
+        led_on = j;
+        if (j) {
+            digitalWrite(led, HIGH);
+        } else {
+            digitalWrite(led, LOW);
         }
     }
 }
@@ -218,9 +232,9 @@ void cmdTemp(const char *args)
     float temp = RTC.readTemperature();
     if (temp != NO_TEMPERATURE) {  // 32767 / 4
         Serial.print(temp);
-        Serial.print("°C (");
+        Serial.print("'C (");
         Serial.print(temperatureCToF(temp));
-        Serial.println("°F)");
+        Serial.println("'F)");
     } else {
         Serial.println("Temperature is not available");
     }
@@ -251,8 +265,8 @@ void cmdTemp(const char *args)
     }
 }  /* */
 
-const char s_ON[] PROGMEM = "ON";
-const char s_OFF[] PROGMEM = "OFF";
+/* const char s_ON[] PROGMEM = "ON";
+const char s_OFF[] PROGMEM = "OFF"; /* */
 
 // "ALARM" command.
 /* void cmdAlarm(const char *args)
@@ -293,11 +307,12 @@ const char s_OFF[] PROGMEM = "OFF";
     printAlarm(alarmNum, &alarm);
 }  /* */
 
-// "NVRAM" command.
-/* void cmdNvram(const char *args)
+// "SRAM" command.
+void cmdSram(const char *args)
 {
     static const char hexchars[] = "0123456789ABCDEF";
-    int count = rtc.byteCount();
+    SRAM.flush();  // reset cursor
+    int count = SRAM.available();
     for (int offset = 0; offset < count; ++offset) {
         if ((offset % 16) == 0) {
             if (offset)
@@ -309,13 +324,64 @@ const char s_OFF[] PROGMEM = "OFF";
             Serial.print(':');
             Serial.print(' ');
         }
-        byte value = rtc.readByte(offset);
+        byte value = SRAM.read();
         Serial.print(hexchars[(value >> 4) & 0x0F]);
         Serial.print(hexchars[value & 0x0F]);
         Serial.print(' ');
     }
     Serial.println();
-}  /* */
+}
+
+// "DUMP" command
+void cmdDump(const char *args)
+{
+  int value = -1;
+
+  if (*args != '\0') {
+    while (*args >= '0' && *args <= '9') {
+      if (value == -1) value = 0;
+      value = value * 10 + (*args++ - '0');
+    }
+  }
+  if (value < 0 || value > 1) {
+    Serial.println("Number must be 0 or 1");
+      return;
+  }
+
+  SRAM.flush();  // reset cursor
+  if (value == 0) {
+    // Correct way is to write until available() == 0
+    uint8_t i = 0;
+    while (SRAM.available()) SRAM.write( i );
+  } else {
+    // SRAM is from register 14h (20) to FFh (255)
+    for (int i = 20; i < 256; i++) SRAM.write( (uint8_t)i );
+  }
+  Serial.println("OK");
+}
+
+// "REGS" command
+void cmdRegisters(const char *)
+{
+    static const char binchars[] = "01";
+    byte value;
+    Wire.beginTransmission(DS3232_I2C_ADDRESS);
+    Wire.write(0x0E);  // sends 0Eh - Control register
+    Wire.endTransmission();
+    Wire.requestFrom(DS3232_I2C_ADDRESS, 2);
+    for (byte i = 0; i < 2; i++) {
+      if (i) { Serial.write("Stat: "); } else { Serial.write("Ctrl: "); }
+        value = Wire.read();
+        Serial.print(binchars[(value >> 7) & 0x01]);
+        Serial.print(binchars[(value >> 6) & 0x01]);
+        Serial.print(binchars[(value >> 5) & 0x01]);
+        Serial.print(binchars[(value >> 4) & 0x01]);
+        Serial.print(binchars[(value >> 3) & 0x01]);
+        Serial.print(binchars[(value >> 2) & 0x01]);
+        Serial.print(binchars[(value >> 1) & 0x01]);
+        Serial.println(binchars[value & 0x01]);
+    }
+}
 
 // List of all commands that are understood by the sketch.
 typedef void (*commandFunc)(const char *args);
@@ -337,16 +403,23 @@ const char s_cmdDateArgs[] PROGMEM = "[YYYYMMDD]";
 const char s_cmdTemp[] PROGMEM = "TEMP";
 const char s_cmdTempDesc[] PROGMEM =
     "Read the current temperature";
-const char s_cmdAlarms[] PROGMEM = "ALARMS";
+/* const char s_cmdAlarms[] PROGMEM = "ALARMS";
 const char s_cmdAlarmsDesc[] PROGMEM =
     "Print the status of all alarms";
 const char s_cmdAlarm[] PROGMEM = "ALARM";
 const char s_cmdAlarmDesc[] PROGMEM =
     "Read or write a specific alarm";
-const char s_cmdAlarmArgs[] PROGMEM = "NUM [HH:MM|ON|OFF]";
-const char s_cmdNvram[] PROGMEM = "NVRAM";
-const char s_cmdNvramDesc[] PROGMEM =
-    "Print the contents of NVRAM, excluding alarms";
+const char s_cmdAlarmArgs[] PROGMEM = "NUM [HH:MM|ON|OFF]";  /* */
+const char s_cmdSram[] PROGMEM = "SRAM";
+const char s_cmdSramDesc[] PROGMEM =
+    "Print the contents of SRAM, excluding alarms";
+const char s_cmdDump[] PROGMEM = "DUMP";
+const char s_cmdDumpDesc[] PROGMEM =
+    "Write contents into SRAM; 0=Zeros, 1=Counter";
+const char s_cmdDumpArgs[] PROGMEM = "(0|1)";
+const char s_cmdRegisters[] PROGMEM = "REGS";
+const char s_cmdRegistersDesc[] PROGMEM =
+    "Show the Control and Status registers";
 const char s_cmdHelp[] PROGMEM = "HELP";
 const char s_cmdHelpDesc[] PROGMEM =
     "Prints this help message";
@@ -356,7 +429,9 @@ const command_t commands[] PROGMEM = {
     {s_cmdTemp, cmdTemp, s_cmdTempDesc, 0},
     // {s_cmdAlarms, cmdAlarms, s_cmdAlarmsDesc, 0},
     // {s_cmdAlarm, cmdAlarm, s_cmdAlarmDesc, s_cmdAlarmArgs},
-    // {s_cmdNvram, cmdNvram, s_cmdNvramDesc, 0},
+    {s_cmdSram, cmdSram, s_cmdSramDesc, 0},
+    {s_cmdDump, cmdDump, s_cmdDumpDesc, s_cmdDumpArgs},
+    {s_cmdRegisters, cmdRegisters, s_cmdRegistersDesc, 0},
     {s_cmdHelp, cmdHelp, s_cmdHelpDesc, 0},
     {0, 0}
 };
