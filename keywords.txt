@@ -1,10 +1,20 @@
 DS3232RTC	KEYWORD1
 RTC	        KEYWORD1
+DS3232SRAM	KEYWORD1
+SRAM		KEYWORD1
 
-get		KEYWORD2
-set		KEYWORD2
-read		KEYWORD2
-write		KEYWORD2
-writeTime	KEYWORD2
-writeDate	KEYWORD2
-readTemperature	KEYWORD2
+available		KEYWORD2
+flush			KEYWORD2
+get			KEYWORD2
+isBusy			KEYWORD2
+isOscillatorStopFlag	KEYWORD2
+peek			KEYWORD2
+read			KEYWORD2
+readTemperature		KEYWORD2
+seek			KEYWORD2
+set			KEYWORD2
+setOscillatorStopFlag	KEYWORD2
+tell			KEYWORD2
+write			KEYWORD2
+writeDate		KEYWORD2
+writeTime		KEYWORD2

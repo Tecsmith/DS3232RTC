@@ -80,11 +80,11 @@ class DS3232RTC
     // static void setBBOscillator(bool enable);
     // static void setBBSqareWave(bool enable);
     // Control/Status Register
-    static bool getOscillatorStopFlag();
+    static bool isOscillatorStopFlag();
     static void setOscillatorStopFlag(bool enable);
     // static void setBB33kHzOutput(bool enable);
     static void set33kHzOutput(bool enable);
-    static bool getBusy();
+    static bool isBusy();
   private:
     static void _wTime(tmElements_t &tm);
     static void _wDate(tmElements_t &tm);

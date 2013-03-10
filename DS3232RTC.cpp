@@ -334,7 +334,7 @@ float DS3232RTC::readTemperature() {
 /**
  *
  */
-bool DS3232RTC::getOscillatorStopFlag() {
+bool DS3232RTC::isOscillatorStopFlag() {
   uint8_t value = readRegister(1);
   return ((value & DS3232_OSF) != 0);
 }
@@ -381,7 +381,7 @@ void DS3232RTC::set33kHzOutput(bool enable) {
 /**
  *
  */
-bool DS3232RTC::getBusy() {
+bool DS3232RTC::isBusy() {
   uint8_t value = readRegister(1);
   return ((value & DS3232_BSY) != 0);
 }
