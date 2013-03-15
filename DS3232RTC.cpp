@@ -43,154 +43,6 @@
 
 
 /* +----------------------------------------------------------------------+ */
-/* | DS3232SRAM Class                                                      | */ 
-/* +----------------------------------------------------------------------+ */
-
-/**
- * \brief Attaches to the DS3232 RTC module on the I2C Wire
- */
-DS3232SRAM::DS3232SRAM() {
-  _cursor = 0;
-}
-
-/**
- *
- */
-#if ARDUINO >= 100
-size_t DS3232SRAM::write(uint8_t data) {
-#else
-void DS3232SRAM::write(uint8_t) {
-#endif
-  if (available()) {
-    Wire.beginTransmission(DS3232_I2C_ADDRESS);
-    Wire.write(0x14 + _cursor); 
-    Wire.write(data);
-    Wire.endTransmission();  
-    _cursor++;
-    #if ARDUINO >= 100
-    return 1;
-    #endif
-  } else {
-    #if ARDUINO >= 100
-    return 0;
-    #endif
-  }
-}
-
-/**
- *
- */
-#if ARDUINO >= 100
-size_t DS3232SRAM::write(const char *str) {
-#else
-void DS3232SRAM::write(const char *str) {
-#endif
-  if (available()) {
-    size_t i = 0;
-    Wire.beginTransmission(DS3232_I2C_ADDRESS);
-    Wire.write(0x14 + _cursor); 
-    while (*str && ((available() + i) > 0))
-      i += Wire.write(*str++);
-    Wire.endTransmission();
-    _cursor += i;
-    #if ARDUINO >= 100
-    return i;
-    #endif
-  } else {
-    #if ARDUINO >= 100
-    return 0;
-    #endif
-  }
-}
-
-/**
- *
- */
-#if ARDUINO >= 100
-size_t DS3232SRAM::write(const uint8_t *buf, size_t size) {
-#else
-void DS3232SRAM::write(const uint8_t *buf, size_t size) {
-#endif
-  if (available()) {
-    size_t i = 0;
-    Wire.beginTransmission(DS3232_I2C_ADDRESS);
-    Wire.write(0x14 + _cursor); 
-    while (size-- && ((available() + i) > 0))
-      i += Wire.write(*buf++);
-    Wire.endTransmission();
-    _cursor += i;
-    #if ARDUINO >= 100
-    return i;
-    #endif
-  } else {
-    #if ARDUINO >= 100
-    return 0;
-    #endif
-  }
-}
-
-/**
- *
- */
-int DS3232SRAM::available() {
-  return 0xEC - _cursor;  // How many bytes left
-}
-
-/**
- * \brief Read a single byte from SRAM
- */
-int DS3232SRAM::read() {
-  int res = peek();
-  if (res != -1) _cursor++;
-  return res;
-}
-
-/**
- *
- */
-int DS3232SRAM::peek() {
-  if (available()) {
-    Wire.beginTransmission(DS3232_I2C_ADDRESS);
-    Wire.write(0x14 + _cursor); 
-    Wire.endTransmission();  
-    Wire.requestFrom(DS3232_I2C_ADDRESS, 1);
-    if (Wire.available()) {
-      return Wire.read();
-    } else {
-      return -1;
-    }
-  } else {
-    return -1;
-  }
-}
-
-/**
- * \brief Reset the cursor to 0
- */
-void DS3232SRAM::flush() {
-  _cursor = 0;
-}
-
-/**
- *
- */
-uint8_t DS3232SRAM::seek(uint8_t pos) {
-  if (pos <= 0xEB)
-    _cursor = pos;
-  return _cursor;
-}
-
-/**
- *
- */
-uint8_t DS3232SRAM::tell() {
-  return _cursor;
-}
-
-DS3232SRAM SRAM = DS3232SRAM();  // instantiate for use
-
-
-/* +----------------------------------------------------------------------+ */
 /* | DS3232RTC Class                                                      | */ 
 /* +----------------------------------------------------------------------+ */
 
@@ -199,6 +51,18 @@ DS3232SRAM SRAM = DS3232SRAM();  // instantiate for use
  */
 DS3232RTC::DS3232RTC() {
   Wire.begin();
+}
+
+bool DS3232RTC::available() {
+  Wire.beginTransmission(DS3232_I2C_ADDRESS);
+  Wire.write(0x05);  // sends 05h - month register
+  Wire.endTransmission();
+  Wire.requestFrom(DS3232_I2C_ADDRESS, 1);
+  if (Wire.available()) {
+    uint8_t dummy = Wire.read();
+    return true;
+  }
+  return false;
 }
   
 /**
@@ -309,33 +173,33 @@ float DS3232RTC::readTemperature() {
  */
 /* void DS3232RTC::setBBOscillator(bool enable) {
   // Bit7 is NOT EOSC, i.e. 0=started, 1=stopped when on battery power
-  uint8_t value = readRegister(0);
+  uint8_t value = read1(0x0E);  // sends 0Eh - Control register
   if (enable) {
     value &= ~(DS3232_EOSC);
   } else {
     value |= DS3232_EOSC;
   }
-  writeRegister(0, value);
+  write1(0x0E, value);    // sends 0Eh - Control register
 } */
 
 /**
  * Enable or disable the Sqare Wave in battery-backup mode
  */
 /* void DS3232RTC::setBBSqareWave(bool enable) {
-  uint8_t value = readRegister(0);
+  uint8_t value = read1(0x0E);  // sends 0Eh - Control register
   if (enable) {
     value |= DS3232_BBSQW;
   } else {
     value &= ~(DS3232_BBSQW);
   }
-  writeRegister(0, value);
+  write1(0x0E, value);  // sends 0Eh - Control register
 } */
 
 /**
  *
  */
 bool DS3232RTC::isOscillatorStopFlag() {
-  uint8_t value = readRegister(1);
+  uint8_t value = read1(0x0F);  // sends 0Fh - Ctrl/Status register
   return ((value & DS3232_OSF) != 0);
 }
 
@@ -343,46 +207,46 @@ bool DS3232RTC::isOscillatorStopFlag() {
  *
  */
 void DS3232RTC::setOscillatorStopFlag(bool enable) {
-  uint8_t value = readRegister(1);
+  uint8_t value = read1(0x0F);  // sends 0Fh - Ctrl/Status register
   if (enable) {
     value |= DS3232_OSF;
   } else {
     value &= ~(DS3232_OSF);
   }
-  writeRegister(1, value);
+  write1(0x0F, value);  // sends 0Fh - Ctrl/Status register
 }
 
 /**
  *
  */
 /* void DS3232RTC::setBB33kHzOutput(bool enable) {
-  uint8_t value = readRegister(1);
+  uint8_t value = read1(0x0F);  // sends 0Fh - Ctrl/Status register
   if (enable) {
     value |= DS3232_BB33KHZ;
   } else {
     value &= ~(DS3232_BB33KHZ);
   }
-  writeRegister(1, value);
+  write1(0x0F, value);  // sends 0Fh - Ctrl/Status register
 } */
 
 /**
  *
  */
 void DS3232RTC::set33kHzOutput(bool enable) {
-  uint8_t value = readRegister(1);
+  uint8_t value = read1(0x0F);  // sends 0Fh - Ctrl/Status register
   if (enable) {
     value |= DS3232_EN33KHZ;
   } else {
     value &= ~(DS3232_EN33KHZ);
   }
-  writeRegister(1, value);
+  write1(0x0F, value);  // sends 0Fh - Ctrl/Status register
 }
 
 /**
  *
  */
 bool DS3232RTC::isBusy() {
-  uint8_t value = readRegister(1);
+  uint8_t value = read1(0x0F);  // sends 0Fh - Ctrl/Status register
   return ((value & DS3232_BSY) != 0);
 }
 
@@ -434,14 +298,12 @@ uint8_t DS3232RTC::bcd2dec(uint8_t num) {
 /**
  *
  */
-uint8_t DS3232RTC::readRegister(uint8_t o) {
-  if (o > 1) return 0xFF;
+uint8_t DS3232RTC::read1(uint8_t addr) {
   Wire.beginTransmission(DS3232_I2C_ADDRESS);
-  Wire.write(0x0E + o);  // sends 0Eh ~o=0 - Control register, or 0Fh ~o=1 - Ctrl/Status register
+  Wire.write(addr);
   Wire.endTransmission();
 
   Wire.requestFrom(DS3232_I2C_ADDRESS, 1);
-
   if (Wire.available()) {
     return Wire.read();
   } else {
@@ -452,13 +314,196 @@ uint8_t DS3232RTC::readRegister(uint8_t o) {
 /**
  *
  */
-void DS3232RTC::writeRegister(uint8_t o, uint8_t value){
-  if (o > 1) return;
+void DS3232RTC::write1(uint8_t addr, uint8_t data){
   Wire.beginTransmission(DS3232_I2C_ADDRESS);
-  Wire.write(0x0E + o);  // sends 0Eh ~o=0 - Control register, or 0Fh ~o=1 - Ctrl/Status register
-  Wire.write(value);
+  Wire.write(addr);
+  Wire.write(data);
   Wire.endTransmission();
 }
 
-
 DS3232RTC RTC = DS3232RTC();  // instantiate for use
+
+
+/* +----------------------------------------------------------------------+ */
+/* | DS3232SRAM Class                                                      | */ 
+/* +----------------------------------------------------------------------+ */
+
+/**
+ * \brief Attaches to the DS3232 RTC module on the I2C Wire
+ */
+DS3232SRAM::DS3232SRAM()
+  : _cursor(0)
+  , _avail(false)
+  , _init(false)
+{
+  Wire.begin();
+}
+
+/**
+ *
+ */
+uint8_t DS3232SRAM::read(int addr) {
+  if (addr > 0xEC) return 0x00;
+  Wire.beginTransmission(DS3232_I2C_ADDRESS);
+  Wire.write(0x14 + addr); 
+  Wire.endTransmission();  
+  Wire.requestFrom(DS3232_I2C_ADDRESS, 1);
+  if (Wire.available()) {
+    return Wire.read();
+  } else {
+    return 0x00;
+  }
+}
+
+void DS3232SRAM::write(int addr, uint8_t data) {
+  if (addr > 0xEC) return;
+  Wire.beginTransmission(DS3232_I2C_ADDRESS);
+  Wire.write(0x14 + addr); 
+  Wire.write(data);
+  Wire.endTransmission();  
+}
+
+/**
+ *
+ */
+#if ARDUINO >= 100
+size_t DS3232SRAM::write(uint8_t data) {
+#else
+void DS3232SRAM::write(uint8_t) {
+#endif
+  if (available() > 0) {
+    write(_cursor, data);
+    _cursor++;
+    #if ARDUINO >= 100
+    return 1;
+  } else {
+    return 0;
+    #endif
+  }
+}
+
+/**
+ *
+ */
+#if ARDUINO >= 100
+size_t DS3232SRAM::write(const char *str) {
+#else
+void DS3232SRAM::write(const char *str) {
+#endif
+  if (available() > 0) {
+    size_t i = 0;
+    Wire.beginTransmission(DS3232_I2C_ADDRESS);
+    Wire.write(0x14 + _cursor); 
+    while (*str && ((available() + i) > 0))
+      i += Wire.write(*str++);
+    Wire.endTransmission();
+    _cursor += i;
+    #if ARDUINO >= 100
+    return i;
+  } else {
+    return 0;
+    #endif
+  }
+}
+
+/**
+ *
+ */
+#if ARDUINO >= 100
+size_t DS3232SRAM::write(const uint8_t *buf, size_t size) {
+#else
+void DS3232SRAM::write(const uint8_t *buf, size_t size) {
+#endif
+  if (available() > 0) {
+    size_t i = 0;
+    Wire.beginTransmission(DS3232_I2C_ADDRESS);
+    Wire.write(0x14 + _cursor); 
+    while (size-- && ((available() + i) > 0))
+      i += Wire.write(*buf++);
+    Wire.endTransmission();
+    _cursor += i;
+    #if ARDUINO >= 100
+    return i;
+  } else {
+    return 0;
+    #endif
+  }
+}
+
+/**
+ *
+ */
+int DS3232SRAM::available() {
+  if (!_init) {
+    _init = true;
+    Wire.beginTransmission(DS3232_I2C_ADDRESS);
+    Wire.write(0x05);  // sends 05h - month register
+    Wire.endTransmission();
+    Wire.requestFrom(DS3232_I2C_ADDRESS, 1);
+    if (Wire.available()) {
+      uint8_t dummy = Wire.read();
+      _avail = true;
+    } else {
+      _avail = false;
+    }
+  }
+
+  if (_avail) {
+    return 0xEC - _cursor;  // How many bytes left
+  } else {
+    return -1;
+  }
+}
+
+/**
+ * \brief Read a single byte from SRAM
+ */
+int DS3232SRAM::read() {
+  int res = peek();
+  if (res != -1) _cursor++;
+  return res;
+}
+
+/**
+ *
+ */
+int DS3232SRAM::peek() {
+  if (available() > 0) {
+    Wire.beginTransmission(DS3232_I2C_ADDRESS);
+    Wire.write(0x14 + _cursor); 
+    Wire.endTransmission();  
+    Wire.requestFrom(DS3232_I2C_ADDRESS, 1);
+    if (Wire.available()) {
+      return Wire.read();
+    } else {
+      return -1;
+    }
+  } else {
+    return -1;
+  }
+}
+
+/**
+ * \brief Reset the cursor to 0
+ */
+void DS3232SRAM::flush() {
+  _cursor = 0;
+}
+
+/**
+ *
+ */
+uint8_t DS3232SRAM::seek(uint8_t pos) {
+  if (pos <= 0xEB)
+    _cursor = pos;
+  return _cursor;
+}
+
+/**
+ *
+ */
+uint8_t DS3232SRAM::tell() {
+  return _cursor;
+}
+
+DS3232SRAM SRAM = DS3232SRAM();  // instantiate for use
