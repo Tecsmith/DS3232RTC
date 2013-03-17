@@ -229,8 +229,10 @@ void cmdDate(const char *args)
 // "TEMP" command.
 void cmdTemp(const char *args)
 {
-    float temp = RTC.readTemperature();
-    if (temp != NO_TEMPERATURE) {  // 32767 / 4
+    tpElements_t tp;
+    RTC.readTemperature(tp);
+    if (tp.Temp != NO_TEMPERATURE) {
+        float temp = tp.Temp + (tp.Decimal / 100);
         Serial.print(temp);
         Serial.print("'C (");
         Serial.print(temperatureCToF(temp));

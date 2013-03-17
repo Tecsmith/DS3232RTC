@@ -150,9 +150,7 @@ void DS3232RTC::write(tmElements_t &tm) {
 /**
  *
  */
-float DS3232RTC::readTemperature() {
-  float temp;
-
+void DS3232RTC::readTemperature(tpElements_t &tmp) {
   Wire.beginTransmission(DS3232_I2C_ADDRESS);
   Wire.write(0x11);  // sends 11h - MSB of Temp register
   Wire.endTransmission();
@@ -160,11 +158,11 @@ float DS3232RTC::readTemperature() {
   Wire.requestFrom(DS3232_I2C_ADDRESS, 2);
 
   if (Wire.available()) {
-    temp = Wire.read();
-    temp += 0.25 * (Wire.read() >> 6);
-    return temp;
+    tmp.Temp = Wire.read();
+    tmp.Decimal = (Wire.read() >> 6) * 25;
   } else {
-    return NO_TEMPERATURE;
+    tmp.Temp = NO_TEMPERATURE;
+    tmp.Decimal = NO_TEMPERATURE;
   }
 }
 

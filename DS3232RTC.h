@@ -30,7 +30,12 @@
 #define temperatureCToF(C) (C * 9 / 5 + 32)
 #define temperatureFToC(F) ((F - 32) * 5 / 9)
 
-static const int16_t NO_TEMPERATURE = 0x7FFF;
+typedef struct  { 
+  int8_t Temp; 
+  uint8_t Decimal; 
+} tpElements_t, TempElements, *tpElementsPtr_t;
+
+static const uint8_t NO_TEMPERATURE = 0x7F; 
 
 /**
  * DS3232RTC Class
@@ -46,7 +51,7 @@ class DS3232RTC
     static void write(tmElements_t &tm);
     static void writeTime(tmElements_t &tm);
     static void writeDate(tmElements_t &tm);
-    static float readTemperature();
+    static void readTemperature(tpElements_t &tmp);
     // Control Register
     // static void setBBOscillator(bool enable);
     // static void setBBSqareWave(bool enable);
