@@ -28,6 +28,18 @@ information from the DS3232 realtime clock chip.  The application is
 controlled from the Serial Monitor in the Arduino IDE using a simple
 command and response system.  Configure the Serial Monitor to use
 "Newline" line endings.  Type "HELP" to get a list of commands.
+
+How to wire the Freetronics RTC module
+--------------------------------------
+Freetronics RTC -> Freetronics Eleven
+    GND         ->     GND
+    VCC         ->     5V
+    SCL         ->     D5
+    SDA         ->     D4
+    BAT         ->     not connected
+    32K         ->     not connected
+    SQI         ->     D2 (this is INT0 on UNO boards)
+    RST         ->     not connected
 */
 
 #include <Wire.h>  
