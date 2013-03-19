@@ -40,6 +40,7 @@ char buffer[64];
 size_t buflen;
 int led = 13;
 bool led_on = false;
+bool int_0 = false;
 
 const char *days[] = {
     "Sun, ", "Mon, ", "Tue, ", "Wed, ", "Thu, ", "Fri, ", "Sat, "
@@ -74,12 +75,21 @@ void setup() {
     Serial.begin(9600);
     buflen = 0;
     pinMode(led, OUTPUT);
+
     cmdHelp(0);
+
     RTC.set33kHzOutput(false);
+
+    // Wire SQI pin to pin 2 on Uno, Ethernet & Mega; pin 3 on Leonardo
+    // See: http://www.arduino.cc/en/Reference/AttachInterrupt
+    RTC.clearAlarmFlag(3);  // 3 is both (1+2)
+    int_0 = false;
+    attachInterrupt(0, alarmTrigger, CHANGE);
 }
 
 void loop() {
     blink();
+    if (int_0) showTrigger();
 
     if (Serial.available()) {
         // Process serial input for commands from the host.
@@ -103,6 +113,24 @@ void loop() {
                 buffer[buflen++] = ch;
         }
     }
+}
+
+void alarmTrigger()  // Triggered when alarm interupt fired
+{
+    int_0 = true;
+}
+
+void showTrigger()
+{
+    if (RTC.isAlarmFlag(1)) {
+        Serial.println("Alarm 1 Triggered");
+        RTC.clearAlarmFlag(1);
+    }
+    if (RTC.isAlarmFlag(2)) {
+        Serial.println("Alarm 2 Triggered");
+        RTC.clearAlarmFlag(2);
+    }
+    int_0 = false;
 }
 
 void blink()
@@ -242,72 +270,129 @@ void cmdTemp(const char *args)
     }
 }
 
-/* void printAlarm(byte alarmNum, const RTCAlarm *alarm)
+void printAlarm(byte alarmNum, const alarmMode_t mode, const tmElements_t time)
 {
     Serial.print("Alarm ");
-    Serial.print(alarmNum + 1, DEC);
-    Serial.print(": ");
-    if (alarm->flags & 0x01) {
-        printDec2(alarm->hour);
-        Serial.print(':');
-        printDec2(alarm->minute);
-        Serial.println();
+    Serial.print(alarmNum, DEC);
+
+    Serial.print(": INT ");
+    if (RTC.isAlarmInterupt(alarmNum)) {
+        Serial.print("ON");
     } else {
-        Serial.println("Off");
+        Serial.print("OFF");
     }
-}  /* */
+    Serial.print(" & TRIG ");
 
-// "ALARMS" command.
-/* void cmdAlarms(const char *args)
-{
-    RTCAlarm alarm;
-    for (byte alarmNum = 0; alarmNum < RTC::ALARM_COUNT; ++alarmNum) {
-        rtc.readAlarm(alarmNum, &alarm);
-        printAlarm(alarmNum, &alarm);
-    }
-}  /* */
-
-/* const char s_ON[] PROGMEM = "ON";
-const char s_OFF[] PROGMEM = "OFF"; /* */
-
-// "ALARM" command.
-/* void cmdAlarm(const char *args)
-{
-    RTCAlarm alarm;
-    int posn = 0;
-    byte alarmNum = readField(args, posn, RTC::ALARM_COUNT);
-    if (!alarmNum || alarmNum == 99) {
-        Serial.print("Alarm number must be between 1 and ");
-        Serial.println(RTC::ALARM_COUNT, DEC);
+    if (mode == alarmModeOff) {
+        Serial.println("OFF");
         return;
     }
-    --alarmNum;
+    Serial.print("Every ");
+    switch (mode) {
+        case alarmModePerSecond: 
+            Serial.print("Second");
+            break;
+        case alarmModePerMinute:
+            Serial.print("Minute");
+            break;
+        case alarmModeSecondsMatch:
+            Serial.print("??:??:");
+            printDec2(time.Second);
+            break;
+        case alarmModeMinutesMatch:
+            Serial.print("??:");
+            printDec2(time.Minute);
+            Serial.print(":");
+            printDec2(time.Second);
+            break;
+        case alarmModeHoursMatch:
+        case alarmModeDateMatch:
+        case alarmModeDayMatch:
+            if (mode == alarmModeDateMatch) {
+              Serial.print(time.Day);
+              Serial.print("st/nd/rd/th, at ");
+            }
+            if (mode == alarmModeDayMatch) {
+              Serial.print(days[time.Wday - 1]);
+              Serial.print(", at ");
+            }
+            printDec2(time.Hour);
+            Serial.print(":");
+            printDec2(time.Minute);
+            Serial.print(":");
+            printDec2(time.Second);
+            break;
+        default:
+            Serial.print("Unknown"); 
+            break;
+    }
+    Serial.println();
+} 
+
+// "ALARMS" command.
+void cmdAlarms(const char *args)
+{
+    tmElements_t time;
+    alarmMode_t mode;
+    for (byte alarmNum = 1; alarmNum <= 2; ++alarmNum) {
+        RTC.readAlarm(alarmNum, mode, time);
+        printAlarm(alarmNum, mode, time);
+    }
+    showTrigger();
+}
+
+const char s_OFF[] PROGMEM = "OFF";
+
+// "ALARM" command.
+void cmdAlarm(const char *args)
+{
+    tmElements_t time;
+    alarmMode_t mode;
+
+    memset(&time, 0, sizeof(tmElements_t));
+
+    int posn = 0;
+    byte alarmNum = readField(args, posn, 2);
+    if (!alarmNum || alarmNum == 99) {
+        Serial.println("Alarm number must be 1 or 2");
+        return;
+    }
     while (args[posn] == ' ' || args[posn] == '\t')
         ++posn;
     if (args[posn] != '\0') {
         // Set the alarm to a new value.
-        if (matchString(s_ON, args + posn, strlen(args + posn))) {
-            rtc.readAlarm(alarmNum, &alarm);
-            alarm.flags = 1;
-        } else if (matchString(s_OFF, args + posn, strlen(args + posn))) {
-            rtc.readAlarm(alarmNum, &alarm);
-            alarm.flags = 0;
+        if (matchString(s_OFF, args + posn, strlen(args + posn))) {
+            mode = alarmModeOff;
         } else {
-            alarm.hour = readField(args, posn, 23);
-            alarm.minute = readField(args, posn, 59);
-            if (alarm.hour == 99 || alarm.minute == 99) {
+            time.Hour = readField(args, posn, 23);
+            time.Minute = readField(args, posn, 59);
+            if (time.Hour == 99 || time.Minute == 99) {
                 Serial.println("Invalid alarm time format; use HH:MM");
                 return;
             }
-            alarm.flags = 1;
+            mode = alarmModeHoursMatch;
+            bool a1 = RTC.isAlarmInterupt(1);
+            bool a2 = RTC.isAlarmInterupt(2);
+            if (alarmNum == 1) {
+              a1 = true;
+            } else {
+              a2 = true;
+            }
+            if (a1 && a2) {
+              RTC.setSQIMode(sqiModeAlarmBoth);
+            } else if (a1) {
+              RTC.setSQIMode(sqiModeAlarm1);
+            } else if (a2) {
+              RTC.setSQIMode(sqiModeAlarm2);
+            }
         }
-        rtc.writeAlarm(alarmNum, &alarm);
+        RTC.writeAlarm(alarmNum, mode, time);
     }
 
     // Print the current state of the alarm.
-    rtc.readAlarm(alarmNum, &alarm);
-    printAlarm(alarmNum, &alarm);
-}  /* */
+    RTC.readAlarm(alarmNum, mode, time);
+    printAlarm(alarmNum, mode, time);
+}
 
 // "SRAM" command.
 void cmdSram(const char *args)
@@ -385,6 +470,35 @@ void cmdRegisters(const char *)
     }
 }
 
+void cmdMap(const char *)
+{
+    static const char hexchars[] = "0123456789ABCDEF";
+    uint8_t value;
+
+    Wire.beginTransmission(DS3232_I2C_ADDRESS);
+    Wire.write(0x00);  // sends 00h - Seconds register
+    Wire.endTransmission();
+
+    Wire.requestFrom(DS3232_I2C_ADDRESS, 0x14);
+
+    for (int offset = 0; offset < 0x14; offset++) {
+        value = Wire.read();
+
+        if (offset % 7 == 0) {
+            if (offset != 0) Serial.println();
+            Serial.print(hexchars[(offset >> 4) & 0x0F]);
+            Serial.print(hexchars[offset & 0x0F]);
+            Serial.print(':');
+            Serial.print(' ');
+        }
+
+        Serial.print(hexchars[(value >> 4) & 0x0F]);
+        Serial.print(hexchars[value & 0x0F]);
+        Serial.print(' ');
+    }
+    Serial.println();
+}
+
 // List of all commands that are understood by the sketch.
 typedef void (*commandFunc)(const char *args);
 typedef struct
@@ -405,16 +519,16 @@ const char s_cmdDateArgs[] PROGMEM = "[YYYYMMDD]";
 const char s_cmdTemp[] PROGMEM = "TEMP";
 const char s_cmdTempDesc[] PROGMEM =
     "Read the current temperature";
-/* const char s_cmdAlarms[] PROGMEM = "ALARMS";
+const char s_cmdAlarms[] PROGMEM = "ALARMS";
 const char s_cmdAlarmsDesc[] PROGMEM =
     "Print the status of all alarms";
 const char s_cmdAlarm[] PROGMEM = "ALARM";
 const char s_cmdAlarmDesc[] PROGMEM =
     "Read or write a specific alarm";
-const char s_cmdAlarmArgs[] PROGMEM = "NUM [HH:MM|ON|OFF]";  /* */
+const char s_cmdAlarmArgs[] PROGMEM = "NUM [HH:MM|OFF]";
 const char s_cmdSram[] PROGMEM = "SRAM";
 const char s_cmdSramDesc[] PROGMEM =
-    "Print the contents of SRAM, excluding alarms";
+    "Print the contents of SRAM";
 const char s_cmdDump[] PROGMEM = "DUMP";
 const char s_cmdDumpDesc[] PROGMEM =
     "Write contents into SRAM; 0=Zeros, 1=Counter";
@@ -422,6 +536,9 @@ const char s_cmdDumpArgs[] PROGMEM = "(0|1)";
 const char s_cmdRegisters[] PROGMEM = "REGS";
 const char s_cmdRegistersDesc[] PROGMEM =
     "Show the Control and Status registers";
+const char s_cmdMap[] PROGMEM = "MAP";
+const char s_cmdMapDesc[] PROGMEM =
+    "Print the content of Address Map";
 const char s_cmdHelp[] PROGMEM = "HELP";
 const char s_cmdHelpDesc[] PROGMEM =
     "Prints this help message";
@@ -429,11 +546,12 @@ const command_t commands[] PROGMEM = {
     {s_cmdTime, cmdTime, s_cmdTimeDesc, s_cmdTimeArgs},
     {s_cmdDate, cmdDate, s_cmdDateDesc, s_cmdDateArgs},
     {s_cmdTemp, cmdTemp, s_cmdTempDesc, 0},
-    // {s_cmdAlarms, cmdAlarms, s_cmdAlarmsDesc, 0},
-    // {s_cmdAlarm, cmdAlarm, s_cmdAlarmDesc, s_cmdAlarmArgs},
+    {s_cmdAlarms, cmdAlarms, s_cmdAlarmsDesc, 0},
+    {s_cmdAlarm, cmdAlarm, s_cmdAlarmDesc, s_cmdAlarmArgs},
     {s_cmdSram, cmdSram, s_cmdSramDesc, 0},
     {s_cmdDump, cmdDump, s_cmdDumpDesc, s_cmdDumpArgs},
     {s_cmdRegisters, cmdRegisters, s_cmdRegistersDesc, 0},
+    {s_cmdMap, cmdMap, s_cmdMapDesc, 0},
     {s_cmdHelp, cmdHelp, s_cmdHelpDesc, 0},
     {0, 0}
 };

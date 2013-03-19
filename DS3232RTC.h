@@ -19,16 +19,43 @@
 #ifndef DS3232RTC_h
 #define DS3232RTC_h
 
-#include <Wire.h>  // http://arduino.cc/en/Reference/Wire
+#include <Stdint.h>
+#include <Wire.h>    // http://arduino.cc/en/Reference/Wire
 #include <Stream.h>  // http://arduino.cc/en/Reference/Stream
-#include <Time.h>  // http://playground.arduino.cc/Code/time
+#include <Time.h>    // http://playground.arduino.cc/Code/time
 
 // Based on page 11 of specs; http://www.maxim-ic.com/datasheet/index.mvp/id/4984
 #define DS3232_I2C_ADDRESS 0x68
 
-// Helpers
-#define temperatureCToF(C) (C * 9 / 5 + 32)
-#define temperatureFToC(F) ((F - 32) * 5 / 9)
+enum alarmMode_t {
+  alarmModeUnknown,       // not in spec table
+  alarmModePerSecond,     // once per second, A1 only
+  alarmModePerMinute,     // once per minute, A2 only
+  alarmModeSecondsMatch,  // when seconds match, A1 only
+  alarmModeMinutesMatch,  // when minutes [and seconds] match
+  alarmModeHoursMatch,    // when hours, minutes [and seconds] match
+  alarmModeDateMatch,     // when date (of month), hours, minutes [and seconds] match
+  alarmModeDayMatch,      // when day (of week), hours, minutes [and seconds] match
+  alarmModeOff            // set to date or day, but value is 0
+  };
+
+enum sqiMode_t {
+  sqiModeNone, 
+  sqiMode1Hz, 
+  sqiMode1024Hz, 
+  sqiMode4096Hz, 
+  sqiMode8192Hz, 
+  sqiModeAlarm1, 
+  sqiModeAlarm2, 
+  sqiModeAlarmBoth
+  };
+
+enum tempScanRate_t {
+  tempScanRate64sec,
+  tempScanRate128sec,
+  tempScanRate256sec,
+  tempScanRate512sec
+  };
 
 typedef struct  { 
   int8_t Temp; 
@@ -36,6 +63,10 @@ typedef struct  {
 } tpElements_t, TempElements, *tpElementsPtr_t;
 
 static const uint8_t NO_TEMPERATURE = 0x7F; 
+
+// Helpers
+#define temperatureCToF(C) (C * 9 / 5 + 32)
+#define temperatureFToC(F) ((F - 32) * 5 / 9)
 
 /**
  * DS3232RTC Class
@@ -45,27 +76,39 @@ class DS3232RTC
   public:
     DS3232RTC();
     static bool available();
+    // Date and Time
     static time_t get();
     static void set(time_t t);
     static void read(tmElements_t &tm);
     static void write(tmElements_t &tm);
     static void writeTime(tmElements_t &tm);
     static void writeDate(tmElements_t &tm);
-    static void readTemperature(tpElements_t &tmp);
+    // Alarms
+    static void readAlarm(uint8_t alarm, alarmMode_t &mode, tmElements_t &tm);
+    static void writeAlarm(uint8_t alarm, alarmMode_t mode, tmElements_t tm);
     // Control Register
-    // static void setBBOscillator(bool enable);
-    // static void setBBSqareWave(bool enable);
+    static void setBBOscillator(bool enable);
+    static void setBBSqareWave(bool enable);
+    static void setSQIMode(sqiMode_t mode);
+    static bool isAlarmInterupt(uint8_t alarm);
     // Control/Status Register
     static bool isOscillatorStopFlag();
     static void setOscillatorStopFlag(bool enable);
-    // static void setBB33kHzOutput(bool enable);
+    static void setBB33kHzOutput(bool enable);
+    static void setTCXORate(tempScanRate_t rate);
     static void set33kHzOutput(bool enable);
-    static bool isBusy();
+    static bool isTCXOBusy();
+    static bool isAlarmFlag(uint8_t alarm);
+    static uint8_t isAlarmFlag();
+    static void clearAlarmFlag(uint8_t alarm);
+    // Temperature
+    static void readTemperature(tpElements_t &tmp);
   private:
-    static void _wTime(tmElements_t &tm);
-    static void _wDate(tmElements_t &tm);
     static uint8_t dec2bcd(uint8_t num);
     static uint8_t bcd2dec(uint8_t num);
+  protected:
+    static void _wTime(tmElements_t &tm);
+    static void _wDate(tmElements_t &tm);
     static uint8_t read1(uint8_t addr);
     static void write1(uint8_t addr, uint8_t data);
 };
