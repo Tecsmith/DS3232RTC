@@ -19,7 +19,7 @@
 #ifndef DS3232RTC_h
 #define DS3232RTC_h
 
-#include <Stdint.h>
+#include <stdint.h>
 #include <Wire.h>    // http://arduino.cc/en/Reference/Wire
 #include <Stream.h>  // http://arduino.cc/en/Reference/Stream
 #include <Time.h>    // http://playground.arduino.cc/Code/time
