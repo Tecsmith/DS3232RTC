@@ -52,7 +52,9 @@
 DS3232RTC::DS3232RTC() {
   Wire.begin();
 }
-
+/**
+ *  
+ */
 bool DS3232RTC::available() {
   Wire.beginTransmission(DS3232_I2C_ADDRESS);
   Wire.write(0x05);  // sends 05h - month register
@@ -75,7 +77,7 @@ time_t DS3232RTC::get() {
 }
 
 /**
- *
+ * \brief Set the time with tmElements_t
  */
 void DS3232RTC::set(time_t t) {
   tmElements_t tm;
@@ -148,7 +150,8 @@ void DS3232RTC::write(tmElements_t &tm) {
 }
 
 /**
- *
+ * \brief Read the alarm settings from the RTC
+ * Gets both the mode and the actual set datetime for the alarm
  */
 void DS3232RTC::readAlarm(uint8_t alarm, alarmMode_t &mode, tmElements_t &tm) {
   uint8_t data[4];
@@ -218,7 +221,7 @@ void DS3232RTC::readAlarm(uint8_t alarm, alarmMode_t &mode, tmElements_t &tm) {
 }
 
 /**
- *
+ * \brief Program the alarm into the RTC
  */
 void DS3232RTC::writeAlarm(uint8_t alarm, alarmMode_t mode, tmElements_t tm) {
   uint8_t data[4];
@@ -285,7 +288,7 @@ void DS3232RTC::writeAlarm(uint8_t alarm, alarmMode_t mode, tmElements_t tm) {
 }
 
 /**
- * Enable or disable the Oscillator in battery-backup mode, always on when powered by Vcc
+ * \brief Enable or disable the Oscillator in battery-backup mode, always on when powered by Vcc
  */
 void DS3232RTC::setBBOscillator(bool enable) {
   // Bit7 is NOT EOSC, i.e. 0=started, 1=stopped when on battery power
@@ -299,7 +302,8 @@ void DS3232RTC::setBBOscillator(bool enable) {
 }
 
 /**
- * Enable or disable the Sqare Wave in battery-backup mode
+ * \brief Enable or disable the Square Wave in battery-backup mode
+ * TODO: rename function to remove TYPO? (MV)
  */
 void DS3232RTC::setBBSqareWave(bool enable) {
   uint8_t value = read1(0x0E);  // sends 0Eh - Control register
@@ -312,7 +316,7 @@ void DS3232RTC::setBBSqareWave(bool enable) {
 }
 
 /**
- *  Set the SQI pin to either a square wave generator or an alarm interupt
+ * \brief Set the SQI pin to either a square wave generator or an alarm interupt
  */
 void DS3232RTC::setSQIMode(sqiMode_t mode) {
   uint8_t value = read1(0x0E) & 0xE0;  // sends 0Eh - Control register
@@ -361,7 +365,8 @@ void DS3232RTC::setOscillatorStopFlag(bool enable) {
 }
 
 /**
- *
+ * \brief Enable or disable the Battery Backuped output of the 33KHz
+ * @param bool
  */
 void DS3232RTC::setBB33kHzOutput(bool enable) {
   uint8_t value = read1(0x0F);  // sends 0Fh - Ctrl/Status register
@@ -388,7 +393,7 @@ void DS3232RTC::setTCXORate(tempScanRate_t rate) {
 }
 
 /**
- *
+ * \brief Enable or Disable the 33 KHz signal
  */
 void DS3232RTC::set33kHzOutput(bool enable) {
   uint8_t value = read1(0x0F);  // sends 0Fh - Ctrl/Status register
@@ -457,14 +462,14 @@ void DS3232RTC::readTemperature(tpElements_t &tmp) {
 }
 
 /**
- * Convert Decimal to Binary Coded Decimal (BCD)
+ * \brief Convert Decimal to Binary Coded Decimal (BCD)
  */
 uint8_t DS3232RTC::dec2bcd(uint8_t num) {
   return (num/10 * 16) + (num % 10);
 }
 
 /**
- * Convert Binary Coded Decimal (BCD) to Decimal
+ * \brief Convert Binary Coded Decimal (BCD) to Decimal
  */
 uint8_t DS3232RTC::bcd2dec(uint8_t num) {
   return (num/16 * 10) + (num % 16);
