@@ -50,9 +50,10 @@ Freetronics RTC -> Freetronics Eleven
 
 char buffer[64];
 size_t buflen;
-int led = 13;
-bool led_on = false;
-bool int_0 = false;
+int INTERRUPT_PIN = 2; // The PIN that is connected to the INT/SQI output from the RTC.
+int led = 13; // The LED that will flash during the complete program
+bool led_on = false; // Initial state of the LED
+bool int_0 = false; // Initial state of the interrupt flag inside this program
 
 const char *days[] = {
     "Sun, ", "Mon, ", "Tue, ", "Wed, ", "Thu, ", "Fri, ", "Sat, "
@@ -86,7 +87,8 @@ inline uint8_t monthLength(const tmElements_t *date)
 void setup() {
     Serial.begin(9600);
     buflen = 0;
-    pinMode(led, OUTPUT);
+    pinMode(led, OUTPUT); // So we can power the LED
+	pinMode(INTERRUPT_PIN, INPUT_PULLUP); //internal pullup on the Arduino ensures that we can detect the LOW from the SQW/INT pin of the RTC
 
     cmdHelp(0);
 
@@ -101,7 +103,7 @@ void setup() {
 
 void loop() {
     blink();
-    if (int_0) showTrigger();
+    if (int_0) showTrigger(); // When an interrupt/alarm is trigger int_0 is true.
 
     if (Serial.available()) {
         // Process serial input for commands from the host.
@@ -129,9 +131,12 @@ void loop() {
 
 void alarmTrigger()  // Triggered when alarm interupt fired
 {
-    int_0 = true;
+    int_0 = true; // Keep this as short as possible!
 }
 
+/**
+ * Function that shows a message over serial that an alarm has gone off.
+ */
 void showTrigger()
 {
     if (RTC.isAlarmFlag(1)) {
@@ -144,7 +149,9 @@ void showTrigger()
     }
     int_0 = false;
 }
-
+/** 
+ * Blink the LED 13
+ */
 void blink()
 {
     // blink the pin 13 led
@@ -159,14 +166,16 @@ void blink()
         }
     }
 }
-
+/**
+ * Helper function to add zeros to single digits
+ */
 void printDec2(int value)
 {
     Serial.print((char)('0' + (value / 10)));
     Serial.print((char)('0' + (value % 10)));
 }
 
-void printProgString(const prog_char *str)
+void printProgString(const char *str)
 {
     for (;;) {
         char ch = (char)(pgm_read_byte(str));
@@ -195,7 +204,10 @@ byte readField(const char *args, int &posn, int maxValue)
         return value;
 }
 
-// "TIME" command.
+/**
+ * "TIME" command.
+ * This will shwo the RTC time over Serial
+ */
 void cmdTime(const char *args)
 {
     tmElements_t tm;
@@ -515,10 +527,10 @@ void cmdMap(const char *)
 typedef void (*commandFunc)(const char *args);
 typedef struct
 {
-    const prog_char *name;
+    const char *name;
     commandFunc func;
-    const prog_char *desc;
-    const prog_char *args;
+    const char *desc;
+    const char *args;
 } command_t;
 const char s_cmdTime[] PROGMEM = "TIME";
 const char s_cmdTimeDesc[] PROGMEM =
@@ -573,13 +585,13 @@ void cmdHelp(const char *)
 {
     int index = 0;
     for (;;) {
-        const prog_char *name = (const prog_char *)
+        const char *name = (const char *)
             (pgm_read_word(&(commands[index].name)));
         if (!name)
             break;
-        const prog_char *desc = (const prog_char *)
+        const char *desc = (const char *)
             (pgm_read_word(&(commands[index].desc)));
-        const prog_char *args = (const prog_char *)
+        const char *args = (const char *)
             (pgm_read_word(&(commands[index].args)));
         printProgString(name);
         if (args) {
@@ -595,7 +607,7 @@ void cmdHelp(const char *)
 }
 
 // Match a data-space string where the name comes from PROGMEM.
-bool matchString(const prog_char *name, const char *str, int len)
+bool matchString(const char *name, const char *str, int len)
 {
     for (;;) {
         char ch1 = (char)(pgm_read_byte(name));
@@ -644,7 +656,7 @@ void processCommand(const char *buf)
     // Find the command and execute it.
     int index = 0;
     for (;;) {
-        const prog_char *name = (const prog_char *)
+        const char *name = (const char *)
             (pgm_read_word(&(commands[index].name)));
         if (!name)
             break;
