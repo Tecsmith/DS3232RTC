@@ -22,7 +22,7 @@
 #include <stdint.h>
 #include <Wire.h>    // http://arduino.cc/en/Reference/Wire
 #include <Stream.h>  // http://arduino.cc/en/Reference/Stream
-#include <Time.h>    // http://playground.arduino.cc/Code/time
+#include <TimeLib.h> // http://playground.arduino.cc/Code/time
 
 // Based on page 11 of specs; http://www.maxim-ic.com/datasheet/index.mvp/id/4984
 #define DS3232_I2C_ADDRESS 0x68
