@@ -43,7 +43,7 @@ Freetronics RTC -> Freetronics Eleven
 */
 
 #include <Wire.h>  
-#include <Time.h>  
+#include <TimeLib.h>  
 #include <avr/pgmspace.h>
 #include <string.h>
 #include "DS3232RTC.h"  // DS3232 library that returns time as a time_t
