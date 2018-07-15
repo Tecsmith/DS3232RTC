@@ -5,59 +5,59 @@
 #######################################
 # Datatypes (KEYWORD1)
 #######################################
-DS3232RTC				KEYWORD1
-RTC	        			KEYWORD1
-DS3232SRAM				KEYWORD1
-SRAM					KEYWORD1
+DS3232RTC	KEYWORD1
+RTC	        	KEYWORD1
+DS3232SRAM	KEYWORD1
+SRAM	KEYWORD1
 #######################################
 # Methods and Functions (KEYWORD2)
 #######################################
 
-available				KEYWORD2
-clearAlarmFlag			KEYWORD2
-flush					KEYWORD2
-get						KEYWORD2
-isAlarmFlag				KEYWORD2
-isAlarmInterupt			KEYWORD2
-isBusy					KEYWORD2
+available	KEYWORD2
+clearAlarmFlag	KEYWORD2
+flush	KEYWORD2
+get	KEYWORD2
+isAlarmFlag	KEYWORD2
+isAlarmInterupt	KEYWORD2
+isBusy	KEYWORD2
 isOscillatorStopFlag	KEYWORD2
-isTCXOBusy				KEYWORD2
-peek					KEYWORD2
-read					KEYWORD2
-readTemperature			KEYWORD2
-seek					KEYWORD2
-set						KEYWORD2
-set33kHzOutput			KEYWORD2
-setBB33kHzOutput		KEYWORD2
-setBBOscillator			KEYWORD2
-setBBSqareWave			KEYWORD2
+isTCXOBusy	KEYWORD2
+peek	KEYWORD2
+read	KEYWORD2
+readTemperature	KEYWORD2
+seek	KEYWORD2
+set	KEYWORD2
+set33kHzOutput	KEYWORD2
+setBB33kHzOutput	KEYWORD2
+setBBOscillator	KEYWORD2
+setBBSqareWave	KEYWORD2
 setOscillatorStopFlag	KEYWORD2
-setSQIMode				KEYWORD2
-setTCXORate				KEYWORD2
-tell					KEYWORD2
-write					KEYWORD2
-writeDate				KEYWORD2
-writeTime				KEYWORD2
+setSQIMode	KEYWORD2
+setTCXORate	KEYWORD2
+tell	KEYWORD2
+write	KEYWORD2
+writeDate	KEYWORD2
+writeTime	KEYWORD2
 #######################################
 # Constants (LITERAL1)
 #######################################
-sqiModeNone				LITERAL1
-sqiMode1Hz				LITERAL1
-sqiMode1024Hz			LITERAL1
-sqiMode4096Hz			LITERAL1
-sqiMode8192Hz			LITERAL1
-sqiModeAlarm1			LITERAL1
-sqiModeAlarm2			LITERAL1
-sqiModeAlarmBoth		LITERAL1
-sqiModeNone				LITERAL1
-sqiMode1Hz				LITERAL1
-sqiMode1024Hz			LITERAL1
-sqiMode4096Hz			LITERAL1
-sqiMode8192Hz			LITERAL1
-sqiModeAlarm1			LITERAL1
-sqiModeAlarm2			LITERAL1
-sqiModeAlarmBoth		LITERAL1
-tempScanRate64sec		LITERAL1
-tempScanRate128sec		LITERAL1
-tempScanRate256sec		LITERAL1
-tempScanRate512sec		LITERAL1
+sqiModeNone	LITERAL1
+sqiMode1Hz	LITERAL1
+sqiMode1024Hz	LITERAL1
+sqiMode4096Hz	LITERAL1
+sqiMode8192Hz	LITERAL1
+sqiModeAlarm1	LITERAL1
+sqiModeAlarm2	LITERAL1
+sqiModeAlarmBoth	LITERAL1
+sqiModeNone	LITERAL1
+sqiMode1Hz	LITERAL1
+sqiMode1024Hz	LITERAL1
+sqiMode4096Hz	LITERAL1
+sqiMode8192Hz	LITERAL1
+sqiModeAlarm1	LITERAL1
+sqiModeAlarm2	LITERAL1
+sqiModeAlarmBoth	LITERAL1
+tempScanRate64sec	LITERAL1
+tempScanRate128sec	LITERAL1
+tempScanRate256sec	LITERAL1
+tempScanRate512sec	LITERAL1
